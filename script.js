@@ -7,11 +7,20 @@ document.addEventListener('DOMContentLoaded', function () {
     const confirmationModal = document.getElementById('confirmationModal');
     const confirmClearButton = document.getElementById('confirmClearTable');
     const cancelClearButton = document.getElementById('cancelClearTable');
+    const validityInput = document.getElementById('validity');
 
     let products = JSON.parse(localStorage.getItem('products')) || [];
     let produtosJSON = [];
 
-    // Função para carregar o arquivo JSON e normalizar os dados
+    // Máscara automática para validade MM/AA
+    validityInput.addEventListener('input', function (e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length >= 3) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        }
+        e.target.value = value.slice(0, 5);
+    });
+
     async function loadProdutos() {
         try {
             const response = await fetch('produtos.json');
@@ -29,35 +38,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // Chama a função de carregamento do JSON
     loadProdutos();
 
-    // Atualiza a tabela com os dados armazenados
     function updateTable() {
         tableBody.innerHTML = '';
         products.forEach((product, index) => {
             const row = document.createElement('tr');
-            row.innerHTML = `<td>${product.identifier}</td><td>${product.quantity}</td>`;
+            row.innerHTML = `<td>${product.identifier}</td><td>${product.quantity}</td><td>${product.validity || '-'}</td>`;
             row.dataset.index = index;
             tableBody.appendChild(row);
         });
     }
 
-    // Atualiza a tabela na inicialização
     updateTable();
 
-    // Adiciona ou atualiza um produto na lista
     form.addEventListener('submit', function (event) {
         event.preventDefault();
 
         const identifier = String(document.getElementById('identifier').value).trim();
         const quantity = parseInt(document.getElementById('quantity').value, 10);
+        const validity = document.getElementById('validity').value;
 
         const existingProduct = products.find(product => product.identifier === identifier);
+
         if (existingProduct) {
             existingProduct.quantity += quantity;
+            existingProduct.validity = validity;
         } else {
-            products.push({ identifier, quantity });
+            products.push({ identifier, quantity, validity });
         }
 
         localStorage.setItem('products', JSON.stringify(products));
@@ -66,10 +74,9 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('identifier').focus();
     });
 
-    // Gera o arquivo CSV com os dados da tabela e do JSON
     generateFileButton.addEventListener('click', function () {
         try {
-            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Marca\n';
+            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca\n';
 
             products.forEach(product => {
                 const identifier = product.identifier;
@@ -78,20 +85,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 );
 
                 if (matchingProduct) {
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${matchingProduct["MARCA"]}\n`;
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${product.validity || '-'};${matchingProduct["MARCA"]}\n`;
                 } else {
-                    // Decide onde colocar o código não encontrado
                     let codigo = '-';
                     let barras = '-';
-
                     const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
                     if (isCodigoBarras) {
                         barras = identifier;
                     } else {
                         codigo = identifier;
                     }
-
-                    fileContent += `${codigo};-;${barras};${product.quantity};-\n`;
+                    fileContent += `${codigo};-;${barras};${product.quantity};${product.validity || '-'};-\n`;
                 }
             });
 
@@ -106,7 +110,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Limpa a tabela e o localStorage
     clearTableButton.addEventListener('click', function () {
         confirmationModal.style.display = 'block';
     });
@@ -122,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function () {
         confirmationModal.style.display = 'none';
     });
 
-    // Remove o último produto da lista
     removeLastButton.addEventListener('click', function () {
         if (products.length > 0) {
             products.pop();
@@ -131,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Permite editar um produto ao clicar na tabela
     tableBody.addEventListener('click', function (event) {
         const row = event.target.closest('tr');
         if (row) {
@@ -140,6 +141,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             document.getElementById('identifier').value = product.identifier;
             document.getElementById('quantity').value = product.quantity;
+            document.getElementById('validity').value = product.validity || '';
 
             products.splice(index, 1);
             localStorage.setItem('products', JSON.stringify(products));
