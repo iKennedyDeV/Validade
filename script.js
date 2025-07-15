@@ -12,14 +12,20 @@ document.addEventListener('DOMContentLoaded', function () {
     let products = JSON.parse(localStorage.getItem('products')) || [];
     let produtosJSON = [];
 
-    // Máscara automática para validade MM/AA
-    validityInput.addEventListener('input', function (e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length >= 3) {
-            value = value.slice(0, 2) + '/' + value.slice(2, 4);
-        }
-        e.target.value = value.slice(0, 5);
-    });
+    
+    // Máscara automática para validade DD/MM/AA
+validityInput.addEventListener('input', function (e) {
+    let value = e.target.value.replace(/\D/g, '');
+
+    if (value.length >= 3 && value.length <= 4) {
+        value = value.slice(0, 2) + '/' + value.slice(2);
+    } else if (value.length >= 5) {
+        value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 6);
+    }
+
+    e.target.value = value.slice(0, 8); // Limita a DD/MM/AA
+});
+
 
     async function loadProdutos() {
         try {
