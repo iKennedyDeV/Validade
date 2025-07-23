@@ -13,47 +13,34 @@ document.addEventListener('DOMContentLoaded', function () {
     let produtosJSON = [];
 
     validityInput.addEventListener('input', function (e) {
-    let value = e.target.value.replace(/\D/g, '');
+        let digits = e.target.value.replace(/\D/g, '');
 
-    if (value.length >= 3 && value.length <= 4) {
-        value = value.slice(0, 2) + '/' + value.slice(2);
-    } else if (value.length >= 5) {
-        if (value.length <= 6) {
-            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        let formatted = '';
+        if (digits.length <= 4) {
+            if (digits.length >= 3) {
+                formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4);
+            } else {
+                formatted = digits;
+            }
         } else {
-            value = value.slice(0, 2) + '/' + value.slice(2, 2 + 2) + '/' + value.slice(4, 6);
+            if (digits.length >= 5) {
+                formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 6);
+            } else {
+                formatted = digits;
+            }
         }
-    }
 
-    e.target.value = value.slice(0, 8);
-});
-
-
-    async function loadProdutos() {
-        try {
-            const response = await fetch('produtos.json');
-            if (!response.ok) throw new Error('Erro ao carregar JSON');
-            const jsonData = await response.json();
-            produtosJSON = jsonData.map(item => ({
-                ...item,
-                "Código de Barras": String(item["Código de Barras"]).trim(),
-                "CÓDIGO": String(item["CÓDIGO"]).trim()
-            }));
-        } catch (error) {
-            console.error('Erro ao carregar JSON:', error);
-        }
-    }
-
-    loadProdutos();
+        e.target.value = formatted;
+    });
 
     function updateTable() {
         tableBody.innerHTML = '';
-        products.forEach((product, index) => {
-            product.validities.forEach(validity => {
+        products.forEach((product, productIndex) => {
+            product.validities.forEach((validity, validityIndex) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `<td>${product.identifier}</td><td>${validity.quantity}</td><td>${validity.date}</td>`;
-                row.dataset.index = index;
-                row.dataset.validityIndex = product.validities.indexOf(validity);
+                row.dataset.productIndex = productIndex;
+                row.dataset.validityIndex = validityIndex;
                 tableBody.appendChild(row);
             });
         });
@@ -64,16 +51,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const identifier = String(document.getElementById('identifier').value).trim();
         const quantity = parseInt(document.getElementById('quantity').value, 10);
-        const validity = document.getElementById('validity').value;
+        const validity = document.getElementById('validity').value.trim();
 
-        let existingProduct = products.find(product => product.identifier === identifier);
+        if (!identifier || isNaN(quantity) || !validity) {
+            alert("Preencha todos os campos corretamente.");
+            return;
+        }
+
+        let existingProduct = products.find(p => p.identifier === identifier);
 
         if (!existingProduct) {
             existingProduct = { identifier, validities: [] };
             products.push(existingProduct);
         }
 
-        const existingValidity = existingProduct.validities.find(v => v.date === validity);
+        let existingValidity = existingProduct.validities.find(v => v.date === validity);
+
         if (existingValidity) {
             existingValidity.quantity += quantity;
         } else {
@@ -151,9 +144,9 @@ document.addEventListener('DOMContentLoaded', function () {
     tableBody.addEventListener('click', function (event) {
         const row = event.target.closest('tr');
         if (row) {
-            const index = row.dataset.index;
+            const productIndex = row.dataset.productIndex;
             const validityIndex = row.dataset.validityIndex;
-            const product = products[index];
+            const product = products[productIndex];
             const validity = product.validities[validityIndex];
 
             document.getElementById('identifier').value = product.identifier;
@@ -162,10 +155,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
             product.validities.splice(validityIndex, 1);
             if (product.validities.length === 0) {
-                products.splice(index, 1);
+                products.splice(productIndex, 1);
             }
             localStorage.setItem('products', JSON.stringify(products));
             updateTable();
         }
     });
+
+    async function loadProdutos() {
+        try {
+            const response = await fetch('produtos.json');
+            if (!response.ok) throw new Error('Erro ao carregar JSON');
+            const jsonData = await response.json();
+            produtosJSON = jsonData.map(item => ({
+                ...item,
+                "Código de Barras": String(item["Código de Barras"]).trim(),
+                "CÓDIGO": String(item["CÓDIGO"]).trim()
+            }));
+        } catch (error) {
+            console.error('Erro ao carregar JSON:', error);
+        }
+    }
+
+    loadProdutos();
 });
