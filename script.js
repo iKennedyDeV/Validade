@@ -12,27 +12,27 @@ document.addEventListener('DOMContentLoaded', function () {
     let products = JSON.parse(localStorage.getItem('products')) || [];
     let produtosJSON = [];
 
-    
-    // Máscara automática para validade DD/MM/AA
-validityInput.addEventListener('input', function (e) {
-    let value = e.target.value.replace(/\D/g, '');
+    // Aceitar formato MM/AA ou DD/MM/AA
+    validityInput.addEventListener('input', function (e) {
+        let value = e.target.value.replace(/\D/g, '');
 
-    if (value.length >= 3 && value.length <= 4) {
-        value = value.slice(0, 2) + '/' + value.slice(2);
-    } else if (value.length >= 5) {
-        value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 6);
-    }
+        if (value.length >= 3 && value.length <= 4) {
+            value = value.slice(0, 2) + '/' + value.slice(2);
+        } else if (value.length >= 5) {
+            if (value.length <= 6) {
+                value = value.slice(0, 2) + '/' + value.slice(2, 4);
+            } else {
+                value = value.slice(0, 2) + '/' + value.slice(2, 2 + 2) + '/' + value.slice(4, 6);
+            }
+        }
 
-    e.target.value = value.slice(0, 8); // Limita a DD/MM/AA
-});
-
+        e.target.value = value.slice(0, 8);
+    });
 
     async function loadProdutos() {
         try {
             const response = await fetch('produtos.json');
-            if (!response.ok) {
-                throw new Error('Erro ao carregar o arquivo JSON');
-            }
+            if (!response.ok) throw new Error('Erro ao carregar JSON');
             const jsonData = await response.json();
             produtosJSON = jsonData.map(item => ({
                 ...item,
@@ -40,7 +40,7 @@ validityInput.addEventListener('input', function (e) {
                 "CÓDIGO": String(item["CÓDIGO"]).trim()
             }));
         } catch (error) {
-            console.error('Erro ao carregar os dados do JSON:', error);
+            console.error('Erro ao carregar JSON:', error);
         }
     }
 
@@ -49,14 +49,15 @@ validityInput.addEventListener('input', function (e) {
     function updateTable() {
         tableBody.innerHTML = '';
         products.forEach((product, index) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `<td>${product.identifier}</td><td>${product.quantity}</td><td>${product.validity || '-'}</td>`;
-            row.dataset.index = index;
-            tableBody.appendChild(row);
+            product.validities.forEach(validity => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>${product.identifier}</td><td>${validity.quantity}</td><td>${validity.date}</td>`;
+                row.dataset.index = index;
+                row.dataset.validityIndex = product.validities.indexOf(validity);
+                tableBody.appendChild(row);
+            });
         });
     }
-
-    updateTable();
 
     form.addEventListener('submit', function (event) {
         event.preventDefault();
@@ -65,13 +66,18 @@ validityInput.addEventListener('input', function (e) {
         const quantity = parseInt(document.getElementById('quantity').value, 10);
         const validity = document.getElementById('validity').value;
 
-        const existingProduct = products.find(product => product.identifier === identifier);
+        let existingProduct = products.find(product => product.identifier === identifier);
 
-        if (existingProduct) {
-            existingProduct.quantity += quantity;
-            existingProduct.validity = validity;
+        if (!existingProduct) {
+            existingProduct = { identifier, validities: [] };
+            products.push(existingProduct);
+        }
+
+        const existingValidity = existingProduct.validities.find(v => v.date === validity);
+        if (existingValidity) {
+            existingValidity.quantity += quantity;
         } else {
-            products.push({ identifier, quantity, validity });
+            existingProduct.validities.push({ date: validity, quantity });
         }
 
         localStorage.setItem('products', JSON.stringify(products));
@@ -85,24 +91,22 @@ validityInput.addEventListener('input', function (e) {
             let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca\n';
 
             products.forEach(product => {
-                const identifier = product.identifier;
-                const matchingProduct = produtosJSON.find(item =>
-                    item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
-                );
+                product.validities.forEach(validity => {
+                    const identifier = product.identifier;
+                    const match = produtosJSON.find(item =>
+                        item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
+                    );
 
-                if (matchingProduct) {
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${product.validity || '-'};${matchingProduct["MARCA"]}\n`;
-                } else {
-                    let codigo = '-';
-                    let barras = '-';
-                    const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
-                    if (isCodigoBarras) {
-                        barras = identifier;
+                    if (match) {
+                        fileContent += `${match["CÓDIGO"]};${match["DESCRIÇÃO"]};${match["Código de Barras"]};${validity.quantity};${validity.date};${match["MARCA"]}\n`;
                     } else {
-                        codigo = identifier;
+                        let codigo = '-';
+                        let barras = '-';
+                        if (identifier.length >= 8 && /^\d+$/.test(identifier)) barras = identifier;
+                        else codigo = identifier;
+                        fileContent += `${codigo};-;${barras};${validity.quantity};${validity.date};-\n`;
                     }
-                    fileContent += `${codigo};-;${barras};${product.quantity};${product.validity || '-'};-\n`;
-                }
+                });
             });
 
             const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
@@ -111,29 +115,34 @@ validityInput.addEventListener('input', function (e) {
             link.download = 'produtos.csv';
             link.click();
         } catch (error) {
-            console.error('Erro ao gerar o arquivo CSV:', error);
-            alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
+            console.error('Erro ao gerar CSV:', error);
+            alert('Erro ao gerar CSV. Veja o console para detalhes.');
         }
     });
 
-    clearTableButton.addEventListener('click', function () {
+    clearTableButton.addEventListener('click', () => {
         confirmationModal.style.display = 'block';
     });
 
-    cancelClearButton.addEventListener('click', function () {
+    cancelClearButton.addEventListener('click', () => {
         confirmationModal.style.display = 'none';
     });
 
-    confirmClearButton.addEventListener('click', function () {
+    confirmClearButton.addEventListener('click', () => {
         products = [];
         localStorage.removeItem('products');
         updateTable();
         confirmationModal.style.display = 'none';
     });
 
-    removeLastButton.addEventListener('click', function () {
+    removeLastButton.addEventListener('click', () => {
         if (products.length > 0) {
-            products.pop();
+            const lastProduct = products[products.length - 1];
+            if (lastProduct.validities.length > 1) {
+                lastProduct.validities.pop();
+            } else {
+                products.pop();
+            }
             localStorage.setItem('products', JSON.stringify(products));
             updateTable();
         }
@@ -143,13 +152,18 @@ validityInput.addEventListener('input', function (e) {
         const row = event.target.closest('tr');
         if (row) {
             const index = row.dataset.index;
+            const validityIndex = row.dataset.validityIndex;
             const product = products[index];
+            const validity = product.validities[validityIndex];
 
             document.getElementById('identifier').value = product.identifier;
-            document.getElementById('quantity').value = product.quantity;
-            document.getElementById('validity').value = product.validity || '';
+            document.getElementById('quantity').value = validity.quantity;
+            document.getElementById('validity').value = validity.date;
 
-            products.splice(index, 1);
+            product.validities.splice(validityIndex, 1);
+            if (product.validities.length === 0) {
+                products.splice(index, 1);
+            }
             localStorage.setItem('products', JSON.stringify(products));
             updateTable();
         }
