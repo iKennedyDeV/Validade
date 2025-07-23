@@ -12,22 +12,22 @@ document.addEventListener('DOMContentLoaded', function () {
     let products = JSON.parse(localStorage.getItem('products')) || [];
     let produtosJSON = [];
 
-    // Aceitar formato MM/AA ou DD/MM/AA
     validityInput.addEventListener('input', function (e) {
-        let value = e.target.value.replace(/\D/g, '');
+    let value = e.target.value.replace(/\D/g, '');
 
-        if (value.length >= 3 && value.length <= 4) {
-            value = value.slice(0, 2) + '/' + value.slice(2);
-        } else if (value.length >= 5) {
-            if (value.length <= 6) {
-                value = value.slice(0, 2) + '/' + value.slice(2, 4);
-            } else {
-                value = value.slice(0, 2) + '/' + value.slice(2, 2 + 2) + '/' + value.slice(4, 6);
-            }
+    if (value.length >= 3 && value.length <= 4) {
+        value = value.slice(0, 2) + '/' + value.slice(2);
+    } else if (value.length >= 5) {
+        if (value.length <= 6) {
+            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        } else {
+            value = value.slice(0, 2) + '/' + value.slice(2, 2 + 2) + '/' + value.slice(4, 6);
         }
+    }
 
-        e.target.value = value.slice(0, 8);
-    });
+    e.target.value = value.slice(0, 8);
+});
+
 
     async function loadProdutos() {
         try {
