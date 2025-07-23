@@ -147,19 +147,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    tableBody.addEventListener('click', function (event) {
-        const row = event.target.closest('tr');
-        if (row) {
-            const index = row.dataset.index;
-            const product = products[index];
+    tableBody.addEventListener('click', function(event) {
+    const row = event.target.closest('tr');
+    if (!row) return;
 
-            document.getElementById('identifier').value = product.identifier;
-            document.getElementById('quantity').value = product.quantity;
-            document.getElementById('validity').value = product.validity || '';
+    const index = parseInt(row.dataset.index, 10);
+    if (isNaN(index)) return;
 
-            products.splice(index, 1);
-            localStorage.setItem('products', JSON.stringify(products));
-            updateTable();
-        }
-    });
+    const product = products[index];
+
+    // Coloca os valores atuais no formulário para edição
+    document.getElementById('identifier').value = product.identifier;
+    document.getElementById('quantity').value = product.quantity;
+    document.getElementById('validity').value = product.validity || '';
+
+    // Remove do array para evitar duplicação no submit
+    products.splice(index, 1);
+    localStorage.setItem('products', JSON.stringify(products));
+    updateTable();
+});
+
 });
