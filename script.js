@@ -98,8 +98,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
                 );
 
+                // Ajusta validade: se for MM/AA → 30/MM/AA
+                let validadeFormatada = product.validity || '-';
+                if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
+                    validadeFormatada = '30/' + validadeFormatada;
+                }
+
                 if (matchingProduct) {
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${product.validity || '-'};${matchingProduct["MARCA"]}\n`;
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]}\n`;
                 } else {
                     let codigo = '-';
                     let barras = '-';
@@ -109,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else {
                         codigo = identifier;
                     }
-                    fileContent += `${codigo};-;${barras};${product.quantity};${product.validity || '-'};-\n`;
+                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-\n`;
                 }
             });
 
@@ -148,23 +154,23 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     tableBody.addEventListener('click', function(event) {
-    const row = event.target.closest('tr');
-    if (!row) return;
+        const row = event.target.closest('tr');
+        if (!row) return;
 
-    const index = parseInt(row.dataset.index, 10);
-    if (isNaN(index)) return;
+        const index = parseInt(row.dataset.index, 10);
+        if (isNaN(index)) return;
 
-    const product = products[index];
+        const product = products[index];
 
-    // Coloca os valores atuais no formulário para edição
-    document.getElementById('identifier').value = product.identifier;
-    document.getElementById('quantity').value = product.quantity;
-    document.getElementById('validity').value = product.validity || '';
+        // Coloca os valores atuais no formulário para edição
+        document.getElementById('identifier').value = product.identifier;
+        document.getElementById('quantity').value = product.quantity;
+        document.getElementById('validity').value = product.validity || '';
 
-    // Remove do array para evitar duplicação no submit
-    products.splice(index, 1);
-    localStorage.setItem('products', JSON.stringify(products));
-    updateTable();
-});
+        // Remove do array para evitar duplicação no submit
+        products.splice(index, 1);
+        localStorage.setItem('products', JSON.stringify(products));
+        updateTable();
+    });
 
 });
