@@ -90,7 +90,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     generateFileButton.addEventListener('click', function () {
         try {
-            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca\n';
+            // Agora o cabeçalho inclui PREÇO
+            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca;Preco\n';
 
             products.forEach(product => {
                 const identifier = product.identifier;
@@ -105,7 +106,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (matchingProduct) {
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]}\n`;
+                    const preco = matchingProduct["PREÇO"] ?? '-';
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${preco}\n`;
                 } else {
                     let codigo = '-';
                     let barras = '-';
@@ -115,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else {
                         codigo = identifier;
                     }
-                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-\n`;
+                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-;-\n`;
                 }
             });
 
