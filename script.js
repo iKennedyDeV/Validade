@@ -90,8 +90,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     generateFileButton.addEventListener('click', function () {
         try {
-            // Agora o cabeçalho inclui PREÇO
-            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca;Preco\n';
+            // Cabeçalho atualizado → inclui "Total"
+            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca;Preco;Qtd/Valor\n';
 
             products.forEach(product => {
                 const identifier = product.identifier;
@@ -106,8 +106,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (matchingProduct) {
-                    const preco = matchingProduct["PREÇO"] ?? '-';
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${preco}\n`;
+                    const preco = matchingProduct["PREÇO"] ?? 0;
+                    const total = preco * product.quantity;
+
+                    // Formata preço e total em moeda BRL
+                    const precoFormatado = preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    const totalFormatado = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${precoFormatado};${totalFormatado}\n`;
                 } else {
                     let codigo = '-';
                     let barras = '-';
@@ -117,7 +123,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else {
                         codigo = identifier;
                     }
-                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-;-\n`;
+                    // Sem preço → Total também fica "-"
+                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-;-;-\n`;
                 }
             });
 
