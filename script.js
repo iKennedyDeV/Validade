@@ -106,14 +106,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (matchingProduct) {
-                    const preco = matchingProduct["PREÇO"] ?? 0;
+                    const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
                     const total = preco * product.quantity;
 
-                    // Formata preço e total em moeda BRL
-                    const precoFormatado = preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    const totalFormatado = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    
 
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${precoFormatado};${totalFormatado}\n`;
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${preco};${total}\n`;
                 } else {
                     let codigo = '-';
                     let barras = '-';
