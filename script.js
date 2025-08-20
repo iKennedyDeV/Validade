@@ -106,12 +106,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (matchingProduct) {
-                    const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
-                    const total = preco * product.quantity;
+                    const precoFormatado = preco.toFixed(2).replace('.', ',');
+                   const totalFormatado = total.toFixed(2).replace('.', ',');
 
                     
 
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${preco};${total}\n`;
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${precoFormatado};${totalFormatado}\n`;
                 } else {
                     let codigo = '-';
                     let barras = '-';
