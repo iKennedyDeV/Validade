@@ -106,8 +106,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 if (matchingProduct) {
-                    const precoFormatado = preco.toFixed(2).replace('.', ',');
-                   const totalFormatado = total.toFixed(2).replace('.', ',');
+                   const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
+                const total = preco * product.quantity;
+
+               
+                const precoFormatado = preco.toFixed(2).replace('.', ',');
+                const totalFormatado = total.toFixed(2).replace('.', ',');
 
                     
 
