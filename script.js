@@ -8,31 +8,26 @@ document.addEventListener('DOMContentLoaded', function () {
     const confirmClearButton = document.getElementById('confirmClearTable');
     const cancelClearButton = document.getElementById('cancelClearTable');
     const validityInput = document.getElementById('validity');
+    const identifierInput = document.getElementById('identifier');
 
     let products = JSON.parse(localStorage.getItem('products')) || [];
     let produtosJSON = [];
 
-    // Máscara automática para validade MM/AA ou DD/MM/AA
+    // Máscara automática para validade
     validityInput.addEventListener('input', function (e) {
         let value = e.target.value.replace(/\D/g, '');
-
         if (value.length <= 4) {
-            // MM/AA
             value = value.slice(0, 2) + (value.length > 2 ? '/' + value.slice(2) : '');
         } else if (value.length <= 6) {
-            // DD/MM/AA
             value = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4);
         }
-
         e.target.value = value;
     });
 
     async function loadProdutos() {
         try {
             const response = await fetch('produtos.json');
-            if (!response.ok) {
-                throw new Error('Erro ao carregar o arquivo JSON');
-            }
+            if (!response.ok) throw new Error('Erro ao carregar o arquivo JSON');
             const jsonData = await response.json();
             produtosJSON = jsonData.map(item => ({
                 ...item,
@@ -43,7 +38,6 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Erro ao carregar os dados do JSON:', error);
         }
     }
-
     loadProdutos();
 
     function updateTable() {
@@ -55,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function () {
             tableBody.appendChild(row);
         });
     }
-
     updateTable();
 
     form.addEventListener('submit', function (event) {
@@ -89,58 +82,48 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     generateFileButton.addEventListener('click', function () {
-    try {
-        // Cabeçalho atualizado → inclui "Total"
-        let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca;Preco;Qtd/Valor\n';
+        try {
+            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca;Preco;Qtd/Valor\n';
+            products.forEach(product => {
+                const identifier = product.identifier;
+                const matchingProduct = produtosJSON.find(item =>
+                    item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
+                );
 
-        products.forEach(product => {
-            const identifier = product.identifier;
-            const matchingProduct = produtosJSON.find(item =>
-                item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
-            );
-
-            // Ajusta validade: se for MM/AA → 30/MM/AA
-            let validadeFormatada = product.validity || '-';
-            if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
-                validadeFormatada = '30/' + validadeFormatada;
-            }
-
-            if (matchingProduct) {
-                // ✅ Converte preço da base e calcula total
-                const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
-                const total = preco * product.quantity;
-
-                // ✅ Formata valores para vírgula como separador decimal
-                const precoFormatado = preco.toFixed(2).replace('.', ',');
-                const totalFormatado = total.toFixed(2).replace('.', ',');
-
-                fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${precoFormatado};${totalFormatado}\n`;
-            } else {
-                let codigo = '-';
-                let barras = '-';
-                const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
-                if (isCodigoBarras) {
-                    barras = identifier;
-                } else {
-                    codigo = identifier;
+                let validadeFormatada = product.validity || '-';
+                if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
+                    validadeFormatada = '30/' + validadeFormatada;
                 }
-                // Sem preço → Total também fica "-"
-                fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-;-;-\n`;
-            }
-        });
 
-        // Gera e baixa o CSV
-        const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'produtos.csv';
-        link.click();
-    } catch (error) {
-        console.error('Erro ao gerar o arquivo CSV:', error);
-        alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
-    }
-});
+                if (matchingProduct) {
+                    const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
+                    const total = preco * product.quantity;
+                    const precoFormatado = preco.toFixed(2).replace('.', ',');
+                    const totalFormatado = total.toFixed(2).replace('.', ',');
+                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${precoFormatado};${totalFormatado}\n`;
+                } else {
+                    let codigo = '-';
+                    let barras = '-';
+                    const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
+                    if (isCodigoBarras) {
+                        barras = identifier;
+                    } else {
+                        codigo = identifier;
+                    }
+                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-;-;-\n`;
+                }
+            });
 
+            const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'produtos.csv';
+            link.click();
+        } catch (error) {
+            console.error('Erro ao gerar o arquivo CSV:', error);
+            alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
+        }
+    });
 
     clearTableButton.addEventListener('click', function () {
         confirmationModal.style.display = 'block';
@@ -168,21 +151,35 @@ document.addEventListener('DOMContentLoaded', function () {
     tableBody.addEventListener('click', function(event) {
         const row = event.target.closest('tr');
         if (!row) return;
-
         const index = parseInt(row.dataset.index, 10);
         if (isNaN(index)) return;
 
         const product = products[index];
-
-        // Coloca os valores atuais no formulário para edição
         document.getElementById('identifier').value = product.identifier;
         document.getElementById('quantity').value = product.quantity;
         document.getElementById('validity').value = product.validity || '';
-
-        // Remove do array para evitar duplicação no submit
         products.splice(index, 1);
         localStorage.setItem('products', JSON.stringify(products));
         updateTable();
     });
 
+    // ================================
+    // 🔹 Compatibilidade HID (modo teclado)
+    // ================================
+    identifierInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
+    // ================================
+    // 🔹 Compatibilidade Broadcast/Message (modo novo)
+    // ================================
+    window.addEventListener("message", function(event) {
+        if (event.data && event.data.barcode) {
+            identifierInput.value = event.data.barcode;
+            form.requestSubmit();
+        }
+    });
 });
