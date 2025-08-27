@@ -82,48 +82,65 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     generateFileButton.addEventListener('click', function () {
-        try {
-            let fileContent = 'Codigo;Descricao;Codigo de Barras;Quantidade;Validade;Marca;Preco;Qtd/Valor\n';
-            products.forEach(product => {
-                const identifier = product.identifier;
-                const matchingProduct = produtosJSON.find(item =>
-                    item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
-                );
+    try {
+        // Nova ordem: Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;Preco;Qtd/Valor
+        let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;Preco;Qtd/Valor\n';
+        let totalQuantidade = 0;
+        let totalPreco = 0;
+        let totalValor = 0;
 
-                let validadeFormatada = product.validity || '-';
-                if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
-                    validadeFormatada = '30/' + validadeFormatada;
-                }
+        products.forEach(product => {
+            const identifier = product.identifier;
+            const matchingProduct = produtosJSON.find(item =>
+                item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
+            );
 
-                if (matchingProduct) {
-                    const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
-                    const total = preco * product.quantity;
-                    const precoFormatado = preco.toFixed(2).replace('.', ',');
-                    const totalFormatado = total.toFixed(2).replace('.', ',');
-                    fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${product.quantity};${validadeFormatada};${matchingProduct["MARCA"]};${precoFormatado};${totalFormatado}\n`;
+            let validadeFormatada = product.validity || '-';
+            if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
+                validadeFormatada = '30/' + validadeFormatada;
+            }
+
+            if (matchingProduct) {
+                const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
+                const total = preco * product.quantity;
+                const precoFormatado = preco.toFixed(2).replace('.', ',');
+                const totalFormatado = total.toFixed(2).replace('.', ',');
+
+                fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${validadeFormatada};${matchingProduct["MARCA"]};${product.quantity};${precoFormatado};${totalFormatado}\n`;
+
+                // Acumula totais
+                totalQuantidade += product.quantity;
+                totalPreco += preco;
+                totalValor += total;
+            } else {
+                let codigo = '-';
+                let barras = '-';
+                const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
+                if (isCodigoBarras) {
+                    barras = identifier;
                 } else {
-                    let codigo = '-';
-                    let barras = '-';
-                    const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
-                    if (isCodigoBarras) {
-                        barras = identifier;
-                    } else {
-                        codigo = identifier;
-                    }
-                    fileContent += `${codigo};-;${barras};${product.quantity};${validadeFormatada};-;-;-\n`;
+                    codigo = identifier;
                 }
-            });
+                fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-\n`;
 
-            const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'produtos.csv';
-            link.click();
-        } catch (error) {
-            console.error('Erro ao gerar o arquivo CSV:', error);
-            alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
-        }
-    });
+                // Acumula só quantidade
+                totalQuantidade += product.quantity;
+            }
+        });
+
+        //  Linha de totais no final (cada soma separada)
+        fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalPreco.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
+
+        const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'produtos.csv';
+        link.click();
+    } catch (error) {
+        console.error('Erro ao gerar o arquivo CSV:', error);
+        alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
+    }
+});
 
     clearTableButton.addEventListener('click', function () {
         confirmationModal.style.display = 'block';
