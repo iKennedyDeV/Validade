@@ -24,15 +24,20 @@ document.addEventListener('DOMContentLoaded', function () {
         e.target.value = value;
     });
 
+    // 🔹 Carregar JSON no novo formato
     async function loadProdutos() {
         try {
             const response = await fetch('produtos.json');
             if (!response.ok) throw new Error('Erro ao carregar o arquivo JSON');
             const jsonData = await response.json();
             produtosJSON = jsonData.map(item => ({
-                ...item,
-                "Código de Barras": String(item["Código de Barras"]).trim(),
-                "CÓDIGO": String(item["CÓDIGO"]).trim()
+                CODIGO: String(item["CODIGO"]).trim(),
+                COD_BARRAS: String(item["COD BARRAS"]).trim(),
+                DESCRICAO: item["DESCRICAO"] || "",
+                FABRICANTE: item["FABRICANTE"] || "",
+                MARCA: item["MARCA"] || "",
+                CUSTO_UNIT: item["CUSTO UNIT."] || "0",
+                PRECO: item["PRECO"] || "0"
             }));
         } catch (error) {
             console.error('Erro ao carregar os dados do JSON:', error);
@@ -81,66 +86,70 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('identifier').focus();
     });
 
+    // 🔹 Geração de CSV adaptado ao novo JSON
     generateFileButton.addEventListener('click', function () {
-    try {
-        // Nova ordem: Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;Preco;Qtd/Valor
-        let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;Preco;Qtd/Valor\n';
-        let totalQuantidade = 0;
-        let totalPreco = 0;
-        let totalValor = 0;
+        try {
+            // Nova ordem: Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;Custo Unit.;Preco;Qtd/Valor
+            let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;Custo Unit.;Preco;Qtd/Valor\n';
+            let totalQuantidade = 0;
+            let totalCusto = 0;
+            let totalPreco = 0;
+            let totalValor = 0;
 
-        products.forEach(product => {
-            const identifier = product.identifier;
-            const matchingProduct = produtosJSON.find(item =>
-                item["Código de Barras"] === identifier || item["CÓDIGO"] === identifier
-            );
+            products.forEach(product => {
+                const identifier = product.identifier;
+                const matchingProduct = produtosJSON.find(item =>
+                    item.COD_BARRAS === identifier || item.CODIGO === identifier
+                );
 
-            let validadeFormatada = product.validity || '-';
-            if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
-                validadeFormatada = '30/' + validadeFormatada;
-            }
-
-            if (matchingProduct) {
-                const preco = parseFloat(matchingProduct["PREÇO"].toString().replace(',', '.')) || 0;
-                const total = preco * product.quantity;
-                const precoFormatado = preco.toFixed(2).replace('.', ',');
-                const totalFormatado = total.toFixed(2).replace('.', ',');
-
-                fileContent += `${matchingProduct["CÓDIGO"]};${matchingProduct["DESCRIÇÃO"]};${matchingProduct["Código de Barras"]};${validadeFormatada};${matchingProduct["MARCA"]};${product.quantity};${precoFormatado};${totalFormatado}\n`;
-
-                // Acumula totais
-                totalQuantidade += product.quantity;
-                totalPreco += preco;
-                totalValor += total;
-            } else {
-                let codigo = '-';
-                let barras = '-';
-                const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
-                if (isCodigoBarras) {
-                    barras = identifier;
-                } else {
-                    codigo = identifier;
+                let validadeFormatada = product.validity || '-';
+                if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
+                    validadeFormatada = '30/' + validadeFormatada;
                 }
-                fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-\n`;
 
-                // Acumula só quantidade
-                totalQuantidade += product.quantity;
-            }
-        });
+                if (matchingProduct) {
+                    const custo = parseFloat(matchingProduct.CUSTO_UNIT.toString().replace(',', '.')) || 0;
+                    const preco = parseFloat(matchingProduct.PRECO.toString().replace(',', '.')) || 0;
+                    const total = preco * product.quantity;
 
-        //  Linha de totais no final (cada soma separada)
-        fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalPreco.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
+                    const custoFormatado = custo.toFixed(2).replace('.', ',');
+                    const precoFormatado = preco.toFixed(2).replace('.', ',');
+                    const totalFormatado = total.toFixed(2).replace('.', ',');
 
-        const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'produtos.csv';
-        link.click();
-    } catch (error) {
-        console.error('Erro ao gerar o arquivo CSV:', error);
-        alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
-    }
-});
+                    fileContent += `${matchingProduct.CODIGO};${matchingProduct.DESCRICAO};${matchingProduct.COD_BARRAS};${validadeFormatada};${matchingProduct.MARCA};${product.quantity};${custoFormatado};${precoFormatado};${totalFormatado}\n`;
+
+                    totalQuantidade += product.quantity;
+                    totalCusto += custo;
+                    totalPreco += preco;
+                    totalValor += total;
+                } else {
+                    let codigo = '-';
+                    let barras = '-';
+                    const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
+                    if (isCodigoBarras) {
+                        barras = identifier;
+                    } else {
+                        codigo = identifier;
+                    }
+                    fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-;-\n`;
+
+                    totalQuantidade += product.quantity;
+                }
+            });
+
+            // Linha de totais
+            fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalCusto.toFixed(2).replace('.', ',')};${totalPreco.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
+
+            const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'produtos.csv';
+            link.click();
+        } catch (error) {
+            console.error('Erro ao gerar o arquivo CSV:', error);
+            alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
+        }
+    });
 
     clearTableButton.addEventListener('click', function () {
         confirmationModal.style.display = 'block';
@@ -180,9 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
         updateTable();
     });
 
-    // ================================
     // 🔹 Compatibilidade HID (modo teclado)
-    // ================================
     identifierInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -190,9 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ================================
     // 🔹 Compatibilidade Broadcast/Message (modo novo)
-    // ================================
     window.addEventListener("message", function(event) {
         if (event.data && event.data.barcode) {
             identifierInput.value = event.data.barcode;
