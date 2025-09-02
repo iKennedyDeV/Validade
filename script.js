@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             // Linha de totais
-            fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalCusto.toFixed(2).replace('.', ',')};${totalPreco.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
+            fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalPreco.toFixed(2).replace('.', ',')};${totalCusto.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
 
             const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
