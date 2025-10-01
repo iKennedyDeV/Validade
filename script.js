@@ -86,71 +86,66 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('identifier').focus();
     });
 
-    // 🔹 Geração de CSV adaptado ao novo JSON
-    generateFileButton.addEventListener('click', function () {
-        try {
-            
-            let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;P/venda;P/Custo;QtdXCusto\n';
-            let totalQuantidade = 0;
-            let totalCusto = 0;
-            let totalPreco = 0;
-            let totalValor = 0;
+    // 🔹 Geração de CSV sem a coluna P/venda
+generateFileButton.addEventListener('click', function () {
+    try {
+        
+        let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;P/Custo;QtdXCusto\n';
+        let totalQuantidade = 0;
+        let totalCusto = 0;
+        let totalValor = 0;
 
-            products.forEach(product => {
-                const identifier = product.identifier;
-                const matchingProduct = produtosJSON.find(item =>
-                    item.COD_BARRAS === identifier || item.CODIGO === identifier
-                );
+        products.forEach(product => {
+            const identifier = product.identifier;
+            const matchingProduct = produtosJSON.find(item =>
+                item.COD_BARRAS === identifier || item.CODIGO === identifier
+            );
 
-                let validadeFormatada = product.validity || '-';
-                if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
-                    validadeFormatada = '30/' + validadeFormatada;
-                }
+            let validadeFormatada = product.validity || '-';
+            if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
+                validadeFormatada = '30/' + validadeFormatada;
+            }
 
-                if (matchingProduct) {
-                    const custo = parseFloat(matchingProduct.CUSTO_UNIT.toString().replace(',', '.')) || 0;
-                    const preco = parseFloat(matchingProduct.PRECO.toString().replace(',', '.')) || 0;
-                    const total = custo * product.quantity;
+            if (matchingProduct) {
+                const custo = parseFloat(matchingProduct.CUSTO_UNIT.toString().replace(',', '.')) || 0;
+                const total = custo * product.quantity;
 
-                    const custoFormatado = custo.toFixed(2).replace('.', ',');
-                    const precoFormatado = preco.toFixed(2).replace('.', ',');
-                    const totalFormatado = total.toFixed(2).replace('.', ',');
+                const custoFormatado = custo.toFixed(2).replace('.', ',');
+                const totalFormatado = total.toFixed(2).replace('.', ',');
 
-                    fileContent += `${matchingProduct.CODIGO};${matchingProduct.DESCRICAO};${matchingProduct.COD_BARRAS};${validadeFormatada};${matchingProduct.MARCA};${product.quantity};${precoFormatado};${custoFormatado};${totalFormatado}\n`;
+                fileContent += `${matchingProduct.CODIGO};${matchingProduct.DESCRICAO};${matchingProduct.COD_BARRAS};${validadeFormatada};${matchingProduct.MARCA};${product.quantity};${custoFormatado};${totalFormatado}\n`;
 
-                    totalQuantidade += product.quantity;
-                    totalCusto += custo;
-                    totalPreco += preco;
-                    totalValor += total;
+                totalQuantidade += product.quantity;
+                totalCusto += custo;
+                totalValor += total;
+            } else {
+                let codigo = '-';
+                let barras = '-';
+                const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
+                if (isCodigoBarras) {
+                    barras = identifier;
                 } else {
-                    let codigo = '-';
-                    let barras = '-';
-                    const isCodigoBarras = identifier.length >= 8 && /^\d+$/.test(identifier);
-                    if (isCodigoBarras) {
-                        barras = identifier;
-                    } else {
-                        codigo = identifier;
-                    }
-                    fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-;-\n`;
-
-                    totalQuantidade += product.quantity;
+                    codigo = identifier;
                 }
-            });
+                fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-\n`;
 
-            // Linha de totais
-            fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalPreco.toFixed(2).replace('.', ',')};${totalCusto.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
+                totalQuantidade += product.quantity;
+            }
+        });
 
-            const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'produtos.csv';
-            link.click();
-        } catch (error) {
-            console.error('Erro ao gerar o arquivo CSV:', error);
-            alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
-        }
-    });
+        // Linha de totais (sem P/venda)
+        fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalCusto.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
 
+        const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'produtos.csv';
+        link.click();
+    } catch (error) {
+        console.error('Erro ao gerar o arquivo CSV:', error);
+        alert('Ocorreu um erro ao gerar o arquivo CSV. Verifique o console para mais informações.');
+    }
+});
     clearTableButton.addEventListener('click', function () {
         confirmationModal.style.display = 'block';
     });
