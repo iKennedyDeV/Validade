@@ -89,8 +89,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // 🔹 Geração de CSV sem a coluna P/venda
 generateFileButton.addEventListener('click', function () {
     try {
-        
-        let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;P/Custo;QtdXCusto\n';
+        const now = new Date();
+        const mesAtual = String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear();
+
+        // Adiciona a nova coluna "Mês Atual"
+        let fileContent = 'Codigo;Descricao;Codigo de Barras;Validade;Marca;Quantidade;P/Custo;QtdXCusto;Mês Atual\n';
         let totalQuantidade = 0;
         let totalCusto = 0;
         let totalValor = 0;
@@ -113,7 +116,7 @@ generateFileButton.addEventListener('click', function () {
                 const custoFormatado = custo.toFixed(2).replace('.', ',');
                 const totalFormatado = total.toFixed(2).replace('.', ',');
 
-                fileContent += `${matchingProduct.CODIGO};${matchingProduct.DESCRICAO};${matchingProduct.COD_BARRAS};${validadeFormatada};${matchingProduct.MARCA};${product.quantity};${custoFormatado};${totalFormatado}\n`;
+                fileContent += `${matchingProduct.CODIGO};${matchingProduct.DESCRICAO};${matchingProduct.COD_BARRAS};${validadeFormatada};${matchingProduct.MARCA};${product.quantity};${custoFormatado};${totalFormatado};${mesAtual}\n`;
 
                 totalQuantidade += product.quantity;
                 totalCusto += custo;
@@ -127,14 +130,14 @@ generateFileButton.addEventListener('click', function () {
                 } else {
                     codigo = identifier;
                 }
-                fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-\n`;
+                fileContent += `${codigo};-;${barras};${validadeFormatada};-;${product.quantity};-;-;${mesAtual}\n`;
 
                 totalQuantidade += product.quantity;
             }
         });
 
-        // Linha de totais (sem P/venda)
-        fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalCusto.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')}\n`;
+        // Linha de totais (inclui o mês também)
+        fileContent += `TOTAL;-;-;-;-;${totalQuantidade};${totalCusto.toFixed(2).replace('.', ',')};${totalValor.toFixed(2).replace('.', ',')};${mesAtual}\n`;
 
         const blob = new Blob([fileContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
