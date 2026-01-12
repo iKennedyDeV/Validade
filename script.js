@@ -106,7 +106,7 @@ generateFileButton.addEventListener('click', function () {
 
             let validadeFormatada = product.validity || '-';
             if (/^\d{2}\/\d{2}$/.test(validadeFormatada)) {
-                validadeFormatada = '30/' + validadeFormatada;
+                validadeFormatada = '28/' + validadeFormatada;
             }
 
             if (matchingProduct) {
